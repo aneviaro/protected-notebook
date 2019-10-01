@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xrustalik/protected-notebook/handlers"
 )
 
 func main() {
