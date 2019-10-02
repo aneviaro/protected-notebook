@@ -1,0 +1,6 @@
+<h2>List of files</h2>
+<ngb-tabset *ngIf="files">
+    <ngb-tab *ngFor="let file of files" title="file.name">
+        {{file.name}}
+    </ngb-tab>
+</ngb-tabset>
