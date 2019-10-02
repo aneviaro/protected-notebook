@@ -15,7 +15,10 @@ export class FileComponent implements OnInit {
     this.loadAll();
   }
   loadAll() {
-    this.fileService.getFileList().subscribe((data:File[])=> this.files = data);
+    this.fileService.getFileList().subscribe((data:File[])=> {
+      console.log(data);
+      this.files = data;
+    });
   }
 
 }

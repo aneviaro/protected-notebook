@@ -2,7 +2,10 @@ package file
 
 import (
 	"errors"
+	"os"
 	"sync"
+
+	"path/filepath"
 
 	"github.com/rs/xid"
 )
@@ -18,13 +21,28 @@ func init() {
 }
 
 func initialiseList() {
-	list = []File{}
+	root := "/Users/xrustalik/Documents/go/protected-notebook/resources"
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		println(path)
+		f := File{
+			ID:   xid.New().String(),
+			Name: info.Name(),
+			Path: path,
+		}
+		mtx.Lock()
+		list = append(list, f)
+		mtx.Unlock()
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 type File struct {
-	ID      string `json:"id"`
-	Content string `json:"content"`
-	Name    string `json:"name"`
+	ID   string `json:"id"`
+	Path string `json:"path"`
+	Name string `json:"name"`
 }
 
 func Get() []File {
@@ -48,11 +66,11 @@ func Delete(id string) error {
 	return nil
 }
 
-func newFile(name string, content string) File {
+func newFile(name string, path string) File {
 	return File{
-		ID:      xid.New().String(),
-		Content: content,
-		Name:    name,
+		ID:   xid.New().String(),
+		Path: path,
+		Name: name,
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 	r.NoRoute(func(c *gin.Context) {

@@ -23,5 +23,5 @@ export class FileService {
 export class File{
   id: string;
   name: string;
-  content: string;
+  path: string;
 }
