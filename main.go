@@ -4,12 +4,13 @@ import (
 	"path"
 	"path/filepath"
 
+	_ "github.com/xrustalik/protected-notebook/file"
+
 	"github.com/gin-gonic/gin"
 	"github.com/xrustalik/protected-notebook/handlers"
 )
 
 func main() {
-
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 	r.NoRoute(func(c *gin.Context) {

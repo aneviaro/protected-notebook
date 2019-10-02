@@ -2,6 +2,7 @@ package file
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 
@@ -18,12 +19,13 @@ var (
 
 func init() {
 	once.Do(initialiseList)
+	fmt.Println("init file")
 }
 
 func initialiseList() {
 	root := "/Users/xrustalik/Documents/go/protected-notebook/resources"
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		println(path)
+		fmt.Println("init package")
 		f := File{
 			ID:   xid.New().String(),
 			Name: info.Name(),
