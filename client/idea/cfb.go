@@ -4,6 +4,7 @@ import (
 	"crypto/cipher"
 )
 
+//CFBDecrypter decrypts CFB
 func CFBDecrypter(ciphertxt string, keyParam string) string {
 	key := []byte(keyParam)
 	ciphertext := []byte(ciphertxt)

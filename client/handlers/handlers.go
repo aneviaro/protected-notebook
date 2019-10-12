@@ -11,29 +11,56 @@ import (
 	"protected-notebook/client/idea"
 	"protected-notebook/client/rsa_initial"
 	"strings"
+
+	"github.com/rs/xid"
 )
 
 var (
-	client *http.Client
+	client        *http.Client
+	currentClient Client
 )
 
 func init() {
 	client = &http.Client{}
 }
 
+//Client stores current client info
+type Client struct {
+	PublicKey  *rsa.PublicKey `json:"key"`
+	ClientName string         `json:"name"`
+}
+
+func newClient(key *rsa.PublicKey, name string) Client {
+	return Client{
+		PublicKey:  key,
+		ClientName: name}
+}
+
+func clientToJSON(client Client) []byte {
+	clientJSON, err := json.Marshal(client)
+	if err != nil {
+		panic(err)
+	}
+	return clientJSON
+}
+
+//SendPublicKey to server with client id
 func SendPublicKey() (*http.Response, error) {
 	createRSAKeyPair()
 	publicKey := rsa_initial.GetPublicKey()
-	pubInJSON := publicKeyToJSON(publicKey)
+	currentClient = newClient(publicKey, xid.New().String())
+	clientJSON := clientToJSON(currentClient)
 	fmt.Println("Sending publicKey...")
-	return client.Post("http://localhost:8080/rsa", "json", strings.NewReader(string(pubInJSON)))
+	return client.Post("http://localhost:8080/rsa", "json", strings.NewReader(string(clientJSON)))
 }
 
+//GetFileContent send a request to get content
 func GetFileContent(name string) (*http.Response, error) {
 	fmt.Println("Getting encrypted file content...")
-	return client.Get("http://localhost:8080/file/" + name)
+	return client.Get("http://localhost:8080/file/" + name + "/" + currentClient.ClientName)
 }
 
+//DecryptContent that passed from server
 func DecryptContent(resp *http.Response) string {
 	fmt.Println("Decrypting file content...")
 	responce := convertHTTPBodyToValidResponce(resp.Body)
@@ -46,6 +73,7 @@ func decryptFileContent(resp Resp) string {
 	return content
 }
 
+//Resp for parsing server responce
 type Resp struct {
 	Content []byte `json:"content"`
 	Key     []byte `json:"key"`
@@ -64,6 +92,7 @@ func convertHTTPBodyToValidResponce(httpBody io.ReadCloser) Resp {
 	return resp
 }
 
+//GetListOfFile from responce Body
 func GetListOfFile(resp *http.Response) []file.File {
 	files, err := convertHTTPBodyToListOfFiles(resp.Body)
 	if err != nil {

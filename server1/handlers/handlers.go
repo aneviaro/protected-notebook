@@ -6,8 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"protected-notebook/server1/client"
 
-	"crypto/rsa"
 	"protected-notebook/server1/file"
 	"protected-notebook/server1/idea"
 	"protected-notebook/server1/rsa_initial"
@@ -24,12 +24,13 @@ func GetFileListHandler(c *gin.Context) {
 //GetFileContent send encrypted file content and IDEA key
 func GetFileContent(c *gin.Context) {
 	fileName := c.Param("name")
+	clientName := c.Param("client")
 	fmt.Println("Finding file...")
 	str, err := file.GetContentByName(fileName)
 	fmt.Println("Encrypting file content...")
 	key, encrypted := idea.CFBEncrypter([]byte(str))
 	fmt.Println("Encrypting IDEA key with RSA Public Key...")
-	key = rsa_initial.EncryptText(key)
+	key = rsa_initial.EncryptText(key, client.GetPublicKey(clientName))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err)
 	}
@@ -93,11 +94,11 @@ func SetRSAPublicKey(c *gin.Context) {
 	if err != nil {
 		panic(err)
 	}
-	pub := &rsa.PublicKey{}
-	err = json.Unmarshal(body, pub)
+	clientItem := client.Client{}
+	err = json.Unmarshal(body, &clientItem)
 	if err != nil {
 		panic(err)
 	}
-	rsa_initial.SetRSA(pub)
+	client.AddNewClient(clientItem)
 	GetFileListHandler(c)
 }

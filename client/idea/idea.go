@@ -2,7 +2,6 @@ package idea
 
 import (
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/binary"
 	"strconv"
 )
@@ -12,6 +11,7 @@ const (
 	rounds = 8
 )
 
+//KeySizeError throws when error size is invalid
 type KeySizeError int
 
 func (k KeySizeError) Error() string {
@@ -23,6 +23,7 @@ type ideaCypher struct {
 	dk [keyLen]uint16
 }
 
+//NewCipher creates a new IDEA cipher
 func NewCipher(key []byte) (cipher.Block, error) {
 	if l := len(key); l != 16 {
 		return nil, KeySizeError(l)
@@ -234,13 +235,4 @@ func mulInv(x uint16) (ret uint16) {
 		t1 += q * t0
 	}
 	return 1 - t1
-}
-
-func GenerateRandomBytes() ([]byte, error) {
-	key := make([]byte, keyLen)
-	_, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }

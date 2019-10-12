@@ -2,6 +2,7 @@ package file
 
 import "github.com/rs/xid"
 
+//File struct to store Files
 type File struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`
