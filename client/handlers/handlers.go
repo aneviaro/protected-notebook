@@ -24,10 +24,24 @@ func init() {
 	client = &http.Client{}
 }
 
+func Login(username string, password string)( *http.Response, error){
+	c:=Credentials{
+		Password: password,
+		Username: username,
+	}
+	credentialsJSON:=credentialsToJson(c)
+	return client.Post("http://localhost:8080/login", "json", strings.NewReader(string(credentialsJSON)))
+
+}
 //Client stores current client info
 type Client struct {
 	PublicKey  *rsa.PublicKey `json:"key"`
 	ClientName string         `json:"name"`
+}
+
+type Credentials struct {
+	Password string `json: "password"`
+	Username string `json: "username"`
 }
 
 func newClient(key *rsa.PublicKey, name string) Client {
@@ -44,8 +58,16 @@ func clientToJSON(client Client) []byte {
 	return clientJSON
 }
 
+func credentialsToJson(credentials Credentials)[]byte{
+	credentialsJSON, err := json.Marshal(credentials)
+	if err != nil {
+		panic(err)
+	}
+	return credentialsJSON
+}
+
 //SendPublicKey to server with client id
-func SendPublicKey() (*http.Response, error) {
+func SendPublicKey() ( *http.Response, error) {
 	createRSAKeyPair()
 	publicKey := rsa_initial.GetPublicKey()
 	currentClient = newClient(publicKey, xid.New().String())
@@ -63,8 +85,8 @@ func GetFileContent(name string) (*http.Response, error) {
 //DecryptContent that passed from server
 func DecryptContent(resp *http.Response) string {
 	fmt.Println("Decrypting file content...")
-	responce := convertHTTPBodyToValidResponce(resp.Body)
-	return decryptFileContent(responce)
+	response := convertHTTPBodyToValidResponce(resp.Body)
+	return decryptFileContent(response)
 }
 
 func decryptFileContent(resp Resp) string {

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"protected-notebook/server1/client"
+	"protected-notebook/server1/credentials"
 
 	"protected-notebook/server1/file"
 	"protected-notebook/server1/idea"
@@ -14,6 +15,27 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func Login(c *gin.Context){
+	var creds credentials.Credentials
+	body, err:=ioutil.ReadAll(c.Request.Body)
+	if err!=nil{
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+	err=json.Unmarshal(body,&creds)
+	if err!=nil{
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+	err=credentials.CheckUser(creds)
+	if err!=nil{
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	fmt.Println("Successfully authorized")
+	GetFileListHandler(c)
+}
 
 //GetFileListHandler send list of files to client
 func GetFileListHandler(c *gin.Context) {

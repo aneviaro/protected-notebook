@@ -25,7 +25,7 @@ func main() {
 	r.GET("/file", handlers.GetFileListHandler)
 	r.POST("/file", handlers.AddFileHandler)
 	r.DELETE("/file/:id", handlers.DeleteFileHandler)
-
+	r.POST("/login", handlers.Login)
 	r.POST("/rsa", handlers.SetRSAPublicKey)
 	r.GET("/file/:name/:client", handlers.GetFileContent)
 	err := r.Run(":8080")
