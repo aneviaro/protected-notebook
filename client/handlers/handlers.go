@@ -18,21 +18,13 @@ import (
 var (
 	client        *http.Client
 	currentClient Client
+	currentCreds  Credentials
 )
 
 func init() {
 	client = &http.Client{}
 }
 
-func Login(username string, password string)( *http.Response, error){
-	c:=Credentials{
-		Password: password,
-		Username: username,
-	}
-	credentialsJSON:=credentialsToJson(c)
-	return client.Post("http://localhost:8080/login", "json", strings.NewReader(string(credentialsJSON)))
-
-}
 //Client stores current client info
 type Client struct {
 	PublicKey  *rsa.PublicKey `json:"key"`
@@ -40,8 +32,15 @@ type Client struct {
 }
 
 type Credentials struct {
-	Password string `json: "password"`
+	Password []byte `json: "password"`
 	Username string `json: "username"`
+}
+
+func SetCredentials(username string, password []byte) {
+	currentCreds = Credentials{
+		Username: username,
+		Password: password}
+	fmt.Printf("%x", currentCreds.Password)
 }
 
 func newClient(key *rsa.PublicKey, name string) Client {
@@ -58,7 +57,7 @@ func clientToJSON(client Client) []byte {
 	return clientJSON
 }
 
-func credentialsToJson(credentials Credentials)[]byte{
+func credentialsToJson(credentials Credentials) []byte {
 	credentialsJSON, err := json.Marshal(credentials)
 	if err != nil {
 		panic(err)
@@ -67,13 +66,19 @@ func credentialsToJson(credentials Credentials)[]byte{
 }
 
 //SendPublicKey to server with client id
-func SendPublicKey() ( *http.Response, error) {
+func SendPublicKey() (*http.Response, error) {
 	createRSAKeyPair()
 	publicKey := rsa_initial.GetPublicKey()
 	currentClient = newClient(publicKey, xid.New().String())
 	clientJSON := clientToJSON(currentClient)
+	req, err := http.NewRequest("POST", "http://localhost:8080/rsa", strings.NewReader(string(clientJSON)))
+	if err != nil {
+		panic(err)
+	}
+	req.SetBasicAuth(currentCreds.Username, string(currentCreds.Password))
 	fmt.Println("Sending publicKey...")
-	return client.Post("http://localhost:8080/rsa", "json", strings.NewReader(string(clientJSON)))
+
+	return client.Do(req)
 }
 
 //GetFileContent send a request to get content

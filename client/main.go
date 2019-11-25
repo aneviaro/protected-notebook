@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,20 +12,17 @@ import (
 func main() {
 	resp, err := doLogin()
 	if err != nil {
-		fmt.Println("Something went wrong while authentication")
-		panic(err)
-	}
-	for resp.StatusCode != 200 {
-		fmt.Println(http.StatusText(resp.StatusCode))
-		resp,err=doLogin()
-	}
-
-	resp, err = handlers.SendPublicKey()
-	if err != nil {
 		fmt.Println("Something went wrong while sending RSA")
 		panic(err)
 	}
-
+	for resp.StatusCode != 200 {
+		fmt.Println(resp.Status)
+		resp, err = doLogin()
+		if err != nil {
+			fmt.Println("Something went wrong while sending RSA")
+			panic(err)
+		}
+	}
 	files := handlers.GetListOfFile(resp)
 
 	for {
@@ -49,5 +48,11 @@ func doLogin() (*http.Response, error) {
 	fmt.Fscan(os.Stdin, &username)
 	fmt.Println("password:")
 	fmt.Fscan(os.Stdin, &password)
-	return handlers.Login(username, password)
+	h := md5.New()
+	h.Write([]byte(password))
+	pw1 := hex.EncodeToString(h.Sum(nil))
+	h.Reset()
+	h.Write([]byte(pw1))
+	handlers.SetCredentials(username, h.Sum(nil))
+	return handlers.SendPublicKey()
 }

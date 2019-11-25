@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,35 +17,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Login(c *gin.Context){
-	var creds credentials.Credentials
-	body, err:=ioutil.ReadAll(c.Request.Body)
-	if err!=nil{
-		c.JSON(http.StatusBadRequest, err)
-		return
-	}
-	err=json.Unmarshal(body,&creds)
-	if err!=nil{
-		c.JSON(http.StatusBadRequest, err)
-		return
-	}
-	err=credentials.CheckUser(creds)
-	if err!=nil{
+//GetFileListHandler send list of files to client
+func GetFileListHandler(c *gin.Context) {
+	err := checkAuthenticated(c.Request)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	fmt.Println("Successfully authorized")
-	GetFileListHandler(c)
-}
-
-//GetFileListHandler send list of files to client
-func GetFileListHandler(c *gin.Context) {
 	fmt.Println("Sending list of available files")
 	c.JSON(http.StatusOK, file.Get())
 }
 
 //GetFileContent send encrypted file content and IDEA key
 func GetFileContent(c *gin.Context) {
+	err := checkAuthenticated(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
 	fileName := c.Param("name")
 	clientName := c.Param("client")
 	fmt.Println("Finding file...")
@@ -63,6 +53,11 @@ func GetFileContent(c *gin.Context) {
 
 //AddFileHandler handle adding new files
 func AddFileHandler(c *gin.Context) {
+	err := checkAuthenticated(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
 	fileItem, statusCode, err := convertHTTPBodyToFile(c.Request.Body)
 	if err != nil {
 		c.JSON(statusCode, err)
@@ -74,6 +69,11 @@ func AddFileHandler(c *gin.Context) {
 
 //DeleteFileHandler handle deleting file
 func DeleteFileHandler(c *gin.Context) {
+	err := checkAuthenticated(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
 	fileID := c.Param("id")
 	if err := file.Delete(fileID); err != nil {
 		c.JSON(http.StatusInternalServerError, err)
@@ -109,17 +109,36 @@ func convertHTTPBodyToString(httpBody io.ReadCloser) (string, int, error) {
 	return string(body), http.StatusOK, nil
 }
 
+func checkAuthenticated(r *http.Request) error {
+	fmt.Println("Checking authority...")
+	username, password, ok := r.BasicAuth()
+	if ok == false {
+		return errors.New("Unauthorized")
+	}
+	creds := credentials.Credentials{
+		Username: username,
+		Password: []byte(password)}
+	return credentials.CheckUser(creds)
+}
+
 //SetRSAPublicKey setting rsa public key
 func SetRSAPublicKey(c *gin.Context) {
+	err := checkAuthenticated(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
 	body, err := ioutil.ReadAll(c.Request.Body)
 	fmt.Println("Setting RSA Public Key...")
 	if err != nil {
-		panic(err)
+		c.JSON(http.StatusInternalServerError, err)
+		return
 	}
 	clientItem := client.Client{}
 	err = json.Unmarshal(body, &clientItem)
 	if err != nil {
-		panic(err)
+		c.JSON(http.StatusInternalServerError, err)
+		return
 	}
 	client.AddNewClient(clientItem)
 	GetFileListHandler(c)
