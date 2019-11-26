@@ -36,6 +36,7 @@ type Credentials struct {
 	Username string `json: "username"`
 }
 
+//SetCredentials for current user
 func SetCredentials(username string, password []byte) {
 	currentCreds = Credentials{
 		Username: username,
@@ -57,14 +58,6 @@ func clientToJSON(client Client) []byte {
 	return clientJSON
 }
 
-func credentialsToJson(credentials Credentials) []byte {
-	credentialsJSON, err := json.Marshal(credentials)
-	if err != nil {
-		panic(err)
-	}
-	return credentialsJSON
-}
-
 //SendPublicKey to server with client id
 func SendPublicKey() (*http.Response, error) {
 	createRSAKeyPair()
@@ -84,7 +77,12 @@ func SendPublicKey() (*http.Response, error) {
 //GetFileContent send a request to get content
 func GetFileContent(name string) (*http.Response, error) {
 	fmt.Println("Getting encrypted file content...")
-	return client.Get("http://localhost:8080/file/" + name + "/" + currentClient.ClientName)
+	req, err := http.NewRequest("GET", "http://localhost:8080/file/"+name+"/"+currentClient.ClientName, strings.NewReader(""))
+	if err != nil {
+		panic(err)
+	}
+	req.SetBasicAuth(currentCreds.Username, string(currentCreds.Password))
+	return client.Do(req)
 }
 
 //DecryptContent that passed from server
