@@ -27,6 +27,8 @@ func main() {
 	r.DELETE("/file/:id", handlers.DeleteFileHandler)
 	r.POST("/rsa", handlers.SetRSAPublicKey)
 	r.GET("/file/:name/:client", handlers.GetFileContent)
+	r.POST("/grant/:filename/:username", handlers.GrantAccess)
+
 	err := r.Run(":8080")
 	if err != nil {
 		panic(err)

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"protected-notebook/server1/access"
 	"protected-notebook/server1/client"
 	"protected-notebook/server1/credentials"
 
@@ -19,7 +20,7 @@ import (
 
 //GetFileListHandler send list of files to client
 func GetFileListHandler(c *gin.Context) {
-	err := checkAuthenticated(c.Request)
+	_, err := checkAuthenticated(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
@@ -30,12 +31,17 @@ func GetFileListHandler(c *gin.Context) {
 
 //GetFileContent send encrypted file content and IDEA key
 func GetFileContent(c *gin.Context) {
-	err := checkAuthenticated(c.Request)
+	username, err := checkAuthenticated(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
 	}
 	fileName := c.Param("name")
+	err = access.CheckAccess(username, fileName)
+	if err != nil {
+		c.JSON(http.StatusForbidden, err)
+		return
+	}
 	clientName := c.Param("client")
 	fmt.Println("Finding file...")
 	str, err := file.GetContentByName(fileName)
@@ -53,7 +59,7 @@ func GetFileContent(c *gin.Context) {
 
 //AddFileHandler handle adding new files
 func AddFileHandler(c *gin.Context) {
-	err := checkAuthenticated(c.Request)
+	_, err := checkAuthenticated(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
@@ -69,7 +75,7 @@ func AddFileHandler(c *gin.Context) {
 
 //DeleteFileHandler handle deleting file
 func DeleteFileHandler(c *gin.Context) {
-	err := checkAuthenticated(c.Request)
+	_, err := checkAuthenticated(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
@@ -109,21 +115,22 @@ func convertHTTPBodyToString(httpBody io.ReadCloser) (string, int, error) {
 	return string(body), http.StatusOK, nil
 }
 
-func checkAuthenticated(r *http.Request) error {
+func checkAuthenticated(r *http.Request) (string, error) {
 	fmt.Println("Checking authority...")
 	username, password, ok := r.BasicAuth()
 	if ok == false {
-		return errors.New("Unauthorized")
+		return username, errors.New("Unauthorized")
 	}
 	creds := credentials.Credentials{
 		Username: username,
 		Password: []byte(password)}
-	return credentials.CheckUser(creds)
+	return username, credentials.CheckUser(creds)
 }
 
 //SetRSAPublicKey setting rsa public key
 func SetRSAPublicKey(c *gin.Context) {
-	err := checkAuthenticated(c.Request)
+	fmt.Println("!!!rsa!!!")
+	_, err := checkAuthenticated(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, err)
 		return
@@ -142,4 +149,24 @@ func SetRSAPublicKey(c *gin.Context) {
 	}
 	client.AddNewClient(clientItem)
 	GetFileListHandler(c)
+}
+
+func GrantAccess(c *gin.Context) {
+	currentUsername, err := checkAuthenticated(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	if currentUsername != "admin" {
+		c.JSON(http.StatusForbidden, errors.New("You doesn't have authority to grant access"))
+		return
+	}
+	filename := c.Param("filename")
+	username := c.Param("username")
+	err = access.GrantAccess(filename, username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, nil)
 }

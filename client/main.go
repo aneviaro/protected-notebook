@@ -11,6 +11,7 @@ import (
 
 func main() {
 	resp, err := doLogin()
+	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println("Something went wrong while sending RSA")
 		panic(err)
@@ -23,25 +24,53 @@ func main() {
 			panic(err)
 		}
 	}
-	files := handlers.GetListOfFile(resp)
-
-	for {
-		fmt.Println("Choose a file: ")
-		for _, fileItem := range files {
-			fmt.Printf("%v\n", fileItem.Name)
+	if handlers.IsAdmin() {
+		showManageAccess()
+	} else {
+		files := handlers.GetListOfFile(resp)
+		for {
+			fmt.Println("Choose a file: ")
+			for _, fileItem := range files {
+				fmt.Printf("%v\n", fileItem.Name)
+			}
+			var name string
+			fmt.Fscan(os.Stdin, &name)
+			resp, err = handlers.GetFileContent(name)
+			if err != nil {
+				fmt.Println("Something went wrong while getting file content")
+				panic(err)
+			}
+			if resp.StatusCode == 200 {
+				decryptedContent := handlers.DecryptContent(resp)
+				fmt.Printf("%s\n", decryptedContent)
+			} else {
+				fmt.Println(resp.Status)
+				continue
+			}
 		}
-		var name string
-		fmt.Fscan(os.Stdin, &name)
-		resp, err = handlers.GetFileContent(name)
-		if err != nil {
-			fmt.Println("Something went wrong while getting file content")
-			panic(err)
-		}
-		decryptedContent := handlers.DecryptContent(resp)
-		fmt.Printf("%s\n", decryptedContent)
 	}
-	defer resp.Body.Close()
 }
+func showManageAccess() {
+	var filename, username string
+	fmt.Println("Grant access")
+	fmt.Println("filename:")
+	fmt.Fscan(os.Stdin, &filename)
+	fmt.Println("username:")
+	fmt.Fscan(os.Stdin, &username)
+	resp, err := handlers.SendGrantAccessRequest(filename, username)
+	if err != nil {
+		fmt.Println("Something went wrong while sending grant request")
+		panic(err)
+	}
+	if resp.StatusCode != 200 {
+		fmt.Println(resp.Status)
+		showManageAccess()
+	} else {
+		fmt.Println("Successfully granted")
+		showManageAccess()
+	}
+}
+
 func doLogin() (*http.Response, error) {
 	var username, password string
 	fmt.Println("username:")

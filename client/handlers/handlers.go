@@ -31,6 +31,21 @@ type Client struct {
 	ClientName string         `json:"name"`
 }
 
+func IsAdmin() bool {
+	return currentCreds.Username == "admin"
+}
+
+//SendGrantAccessRequest for resource [filename] to user [username]
+func SendGrantAccessRequest(filename string, username string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", "http://localhost:8080/grant/"+filename+"/"+username, strings.NewReader(""))
+	if err != nil {
+		panic(err)
+	}
+	req.SetBasicAuth(currentCreds.Username, string(currentCreds.Password))
+	fmt.Println("Sending grant access request...")
+	return client.Do(req)
+}
+
 type Credentials struct {
 	Password []byte `json: "password"`
 	Username string `json: "username"`
@@ -41,7 +56,6 @@ func SetCredentials(username string, password []byte) {
 	currentCreds = Credentials{
 		Username: username,
 		Password: password}
-	fmt.Printf("%x", currentCreds.Password)
 }
 
 func newClient(key *rsa.PublicKey, name string) Client {
